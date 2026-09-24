@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>古法纸浆发酵记录</title>
+  <style>
+    :root { --bg:#f1f3ef; --panel:#fff; --ink:#20241f; --muted:#687066; --line:#d4ddd0; --accent:#526f43; --warn:#9b4937; --amber:#8a6320; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Arial,"PingFang SC",sans-serif; }
+    header { padding:22px 28px; background:#fff; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:16px; align-items:center; }
+    h1 { margin:0; font-size:26px; } h2 { margin:0 0 12px; font-size:18px; }
+    main { display:grid; grid-template-columns:380px 1fr; gap:22px; padding:22px 28px; }
+    form,.panel,.card,.stat { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; }
+    label { display:block; margin:10px 0 5px; color:var(--muted); font-size:13px; }
+    input,select,textarea { width:100%; border:1px solid var(--line); border-radius:6px; padding:9px; font:inherit; background:#fff; }
+    textarea { min-height:60px; resize:vertical; }
+    button { border:0; border-radius:6px; background:var(--accent); color:#fff; padding:10px 13px; font-weight:700; cursor:pointer; }
+    button.secondary { background:#69736a; }
+    button.warn { background:var(--warn); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px; margin-bottom:14px; }
+    .stat strong { display:block; font-size:24px; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
+    .toolbar select,.toolbar input { width:auto; min-width:150px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:12px; }
+    .card { display:grid; gap:8px; cursor:pointer; align-content:start; }
+    .card:hover { border-color:var(--accent); }
+    .card h3 { margin:0; }
+    .meta { color:var(--muted); font-size:13px; }
+    .pill { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:3px 8px; font-size:12px; }
+    .pill.ready { background:#eef4e8; border-color:var(--accent); color:var(--accent); }
+    .pill.abnormal { background:#f7e9e5; border-color:var(--warn); color:var(--warn); }
+    .pill.withdrawn { background:#eef0ec; color:var(--muted); }
+    .pill.waiting { background:#faf3e3; border-color:var(--amber); color:var(--amber); }
+    .warn-text { color:var(--warn); font-weight:700; font-size:13px; }
+    .amber-text { color:var(--amber); font-size:13px; }
+    .tag-row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+    .count-pill { border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:12px; color:var(--muted); }
+    .count-pill.bad { color:var(--warn); border-color:var(--warn); font-weight:700; }
+    .toast { position:fixed; right:24px; bottom:24px; max-width:420px; border-radius:8px; padding:14px 16px; box-shadow:0 8px 24px rgba(0,0,0,.18); background:#fff; border-left:5px solid var(--accent); z-index:30; font-size:14px; line-height:1.5; }
+    .toast.error { border-left-color:var(--warn); }
+    .toast.warn { border-left-color:var(--amber); }
+    .modal-mask { position:fixed; inset:0; background:rgba(32,36,31,.45); display:none; align-items:flex-start; justify-content:center; padding:40px 16px; z-index:20; overflow:auto; }
+    .modal-mask.open { display:flex; }
+    .modal { background:#fff; border-radius:10px; width:min(640px,100%); padding:22px; }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .modal-head h2 { margin:0; }
+    .close { background:transparent; color:var(--muted); font-size:22px; padding:0 6px; }
+    .observations { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; display:grid; gap:8px; max-height:280px; overflow:auto; }
+    .obs { border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-size:13px; }
+    .obs.abnormal { border-color:var(--warn); background:#fdf6f4; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .form-actions { display:flex; gap:10px; margin-top:14px; }
+    .empty { color:var(--muted); padding:24px; text-align:center; }
+    @media (max-width:900px){ header{display:block;padding:18px 16px;} main{grid-template-columns:1fr;padding:16px;} }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>古法纸浆发酵记录</h1><div class="meta">批次档案 · 观察记录 · 状态判定统一由业务模块计算</div></div>
+    <button id="reload" class="secondary">刷新</button>
+  </header>
+  <main>
+    <section>
+      <form id="createForm" class="panel">
+        <h2>新增纸浆批次</h2>
+        <label>批次编号</label><input name="code" required placeholder="如 PF-003">
+        <label>原料来源</label><input name="source" placeholder="如 构树皮">
+        <label>浸泡缸</label><input name="vat" required placeholder="如 三号缸">
+        <label>负责人</label><input name="owner" required>
+        <label>已发酵天数（默认 0，每次观察记录 +1）</label><input name="days" type="number" min="0" value="0">
+        <div class="form-actions"><button>保存批次档案</button></div>
+      </form>
+    </section>
+    <section>
+      <div class="stats" id="stats"></div>
+      <div class="toolbar">
+        <select id="statusFilter">
+          <option value="">全部状态</option>
+        </select>
+        <input id="search" placeholder="搜索编号 / 缸号 / 负责人 / 异常原因">
+        <select id="sortBy">
+          <option value="recent">按最近观察时间排序</option>
+          <option value="abnormal">按异常次数排序</option>
+        </select>
+      </div>
+      <div class="panel">
+        <h2>批次列表</h2>
+        <div class="meta" style="margin-bottom:10px">点击批次卡片可继续记录温度与纤维情况；同一缸未退缸批次在前时，后批满足条件也会排队等待。</div>
+        <div class="grid" id="cards"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal-mask" id="modalMask">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h2 id="modalTitle">批次档案</h2>
+        <button type="button" class="close" id="modalClose">×</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
